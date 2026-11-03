@@ -5,14 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "open-news-search"
 version = "0.1.0"
-description = "Search and extract Chinese news articles"
+description = "Search Chinese news articles"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "httpx",
     "jieba",
     "lxml",
-    "python-dateutil",
 ]
 
 [project.scripts]

@@ -1,6 +1,6 @@
 # Open News Search
 
-搜索中文新闻并可选提取正文。
+搜索中文新闻。
 
 ## 安装
 
@@ -14,7 +14,6 @@ uv sync --default-index https://pypi.tuna.tsinghua.edu.cn/simple/
 open-news "徒步 爬山事故"
 open-news "人工智能" --limit 30
 open-news "人工智能" --days 7
-open-news "低空经济" --full-content
 open-news "经济" --format json --save news.json
 ```
 

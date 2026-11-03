@@ -1,11 +1,8 @@
 import random
 import re
 import unicodedata
-import warnings
 from datetime import datetime, timezone
 from typing import Optional, Union
-
-from dateutil import parser as date_parser
 
 
 _USER_AGENTS = [
@@ -22,13 +19,16 @@ def get_user_agent() -> str:
 def parse_datetime(raw: Union[str, datetime, None]) -> Optional[datetime]:
     if not raw:
         return None
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            value = date_parser.parse(str(raw))
-    except (ValueError, OverflowError, TypeError):
-        return None
-    return value.replace(tzinfo=value.tzinfo or timezone.utc).astimezone(timezone.utc)
+    if isinstance(raw, datetime):
+        value = raw
+    else:
+        try:
+            value = datetime.fromisoformat(str(raw))
+        except ValueError:
+            return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 def nfc(value: str) -> str:

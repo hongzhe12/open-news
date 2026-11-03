@@ -34,13 +34,17 @@ def test_parse_link_page_extracts_titles_and_links():
 
 
 def test_search_news_skips_failed_sources(monkeypatch):
-    monkeypatch.setattr(sources, "_search_360", lambda query, limit: [{"title": "A"}])
-    monkeypatch.setattr(sources, "_search_360_web", lambda query, limit: 1 / 0)
-    monkeypatch.setattr(sources, "_search_sogou", lambda query, limit: [{"title": "B"}])
-    monkeypatch.setattr(sources, "_search_sogou_news", lambda query, limit: [])
-    monkeypatch.setattr(sources, "_search_weixin", lambda query, limit: [{"title": "C"}])
+    def fake_search(query, limit, url, *args):
+        if url == "https://www.so.com/s":
+            raise RuntimeError("source failed")
+        return [{"title": url}]
 
-    assert [article["title"] for article in sources.search_news("test")] == ["A", "B", "C"]
+    monkeypatch.setattr(sources, "_search_source", fake_search)
+
+    articles = sources.search_news("test")
+
+    assert len(articles) == 4
+    assert "https://www.so.com/s" not in [article["title"] for article in articles]
 
 
 def test_url_date_takes_priority_over_search_page_date():

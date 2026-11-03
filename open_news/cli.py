@@ -20,7 +20,6 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         help="Keep articles from the last N days; retain undated results.",
     )
-    parser.add_argument("--full-content", action="store_true")
     _add_output_args(parser)
     return parser
 
@@ -46,7 +45,6 @@ def main() -> None:
         args.query,
         limit=args.limit,
         days=args.days,
-        full_content=args.full_content,
     )
     print(f"搜索用时: {perf_counter() - started:.2f} 秒", file=sys.stderr)
     if args.save:

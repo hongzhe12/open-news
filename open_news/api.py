@@ -1,7 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 
-from .article import get_article
 from .processing import (
     dedupe_articles,
     filter_recent,
@@ -11,18 +10,9 @@ from .processing import (
 from .sources import search_news
 
 
-def _with_full_content(article: Dict) -> Dict:
-    full = get_article(article["url"])
-    return {
-        **article,
-        **{key: value for key, value in full.items() if value not in (None, "", [], {})},
-    }
-
-
 def search_and_get(
     query: str,
     limit: int = 20,
-    full_content: bool = False,
     days: Optional[int] = None,
 ) -> List[Dict]:
     candidate_limit = max(limit * 5, 100) if days else limit * 3
@@ -38,7 +28,4 @@ def search_and_get(
     if days:
         articles = filter_recent(articles, days)
     articles.sort(key=lambda article: not title_matches_query(article, query))
-    articles = articles[:limit]
-    if full_content:
-        articles = [_with_full_content(article) for article in articles]
-    return articles
+    return articles[:limit]

@@ -9,17 +9,20 @@ from lxml.html import fromstring
 from .utils import date_from_url, get_user_agent, parse_datetime
 
 
+_SOURCES = (
+    ("https://news.so.com/ns", "q", {"src": "srp"}, "pn", 4, False),
+    ("https://www.so.com/s", "q", {}, "pn", 4, True),
+    ("https://www.sogou.com/web", "query", {}, None, 1, True),
+    ("https://news.sogou.com/news", "query", {}, None, 1, True),
+    ("https://weixin.sogou.com/weixin", "query", {"type": "2"}, "page", 5, True),
+)
+
+
 def search_news(query: str, limit: int = 20) -> List[Dict]:
-    with ThreadPoolExecutor(max_workers=5) as pool:
+    with ThreadPoolExecutor(max_workers=len(_SOURCES)) as pool:
         futures = [
-            pool.submit(search_source, query, limit)
-            for search_source in (
-                _search_360,
-                _search_360_web,
-                _search_sogou,
-                _search_sogou_news,
-                _search_weixin,
-            )
+            pool.submit(_search_source, query, limit, *source)
+            for source in _SOURCES
         ]
         results = []
         for future in futures:
@@ -27,114 +30,43 @@ def search_news(query: str, limit: int = 20) -> List[Dict]:
                 results.append(future.result())
             except Exception:
                 continue
-    return [
-        article
-        for result in results
-        for article in result
-    ]
+    return [article for result in results for article in result]
 
 
-def _search_360(query: str, limit: int) -> List[Dict]:
-    articles = []
+def _search_source(
+    query: str,
+    limit: int,
+    url: str,
+    query_key: str,
+    extra_params: Dict,
+    page_key,
+    pages: int,
+    resolve_links: bool,
+) -> List[Dict]:
+    results = []
     with httpx.Client(
         headers={"User-Agent": get_user_agent()},
         timeout=20,
         follow_redirects=True,
     ) as client:
-        for page in (1, 2, 3, 4):
-            response = client.get(
-                "https://news.so.com/ns",
-                params={"q": query, "src": "srp", "pn": page},
-            )
+        for page in range(1, pages + 1):
+            params = {**extra_params, query_key: query}
+            if page_key:
+                params[page_key] = page
+            response = client.get(url, params=params)
             response.raise_for_status()
             if "antispider" in str(response.url):
                 break
-            articles.extend(parse_search_page(response.text, limit))
-    return articles
-
-
-def _search_sogou(query: str, limit: int) -> List[Dict]:
-    with httpx.Client(
-        headers={"User-Agent": get_user_agent()},
-        timeout=20,
-        follow_redirects=True,
-    ) as client:
-        response = client.get(
-            "https://www.sogou.com/web",
-            params={"query": query},
-        )
-        response.raise_for_status()
-        results = parse_link_page(response.text, limit)
-        with ThreadPoolExecutor(max_workers=8) as pool:
-            urls = list(pool.map(
-                lambda result: _resolve_redirect_url(client, result["url"]),
-                results,
-            ))
-    return _finalize_results(results, urls)
-
-
-def _search_sogou_news(query: str, limit: int) -> List[Dict]:
-    with httpx.Client(
-        headers={"User-Agent": get_user_agent()},
-        timeout=20,
-        follow_redirects=True,
-    ) as client:
-        response = client.get(
-            "https://news.sogou.com/news",
-            params={"query": query},
-        )
-        response.raise_for_status()
-        results = parse_link_page(response.text, limit)
-        with ThreadPoolExecutor(max_workers=8) as pool:
-            urls = list(pool.map(
-                lambda result: _resolve_redirect_url(client, result["url"]),
-                results,
-            ))
-    return _finalize_results(results, urls)
-
-
-def _search_360_web(query: str, limit: int) -> List[Dict]:
-    with httpx.Client(
-        headers={"User-Agent": get_user_agent()},
-        timeout=20,
-        follow_redirects=True,
-    ) as client:
-        results = []
-        for page in (1, 2, 3, 4):
-            response = client.get(
-                "https://www.so.com/s",
-                params={"q": query, "pn": page},
-            )
-            response.raise_for_status()
-            results.extend(parse_link_page(response.text, limit))
-        with ThreadPoolExecutor(max_workers=8) as pool:
-            urls = list(pool.map(
-                lambda result: _resolve_redirect_url(client, result["url"]),
-                results,
-            ))
-    return _finalize_results(results, urls)
-
-
-def _search_weixin(query: str, limit: int) -> List[Dict]:
-    with httpx.Client(
-        headers={"User-Agent": get_user_agent()},
-        timeout=20,
-        follow_redirects=True,
-    ) as client:
-        results = []
-        for page in (1, 2, 3, 4, 5):
-            response = client.get(
-                "https://weixin.sogou.com/weixin",
-                params={"type": "2", "query": query, "page": page},
-            )
-            response.raise_for_status()
-            results.extend(parse_link_page(response.text, limit))
-        with ThreadPoolExecutor(max_workers=8) as pool:
-            urls = list(pool.map(
-                lambda result: _resolve_redirect_url(client, result["url"]),
-                results,
-            ))
-    return _finalize_results(results, urls)
+            parser = parse_link_page if resolve_links else parse_search_page
+            results.extend(parser(response.text, limit))
+        if resolve_links:
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                urls = list(pool.map(
+                    lambda result: _resolve_redirect_url(client, result["url"]),
+                    results,
+                ))
+            return _finalize_results(results, urls)
+    return results
 
 
 def _finalize_results(results: List[Dict], urls: List[str]) -> List[Dict]:
