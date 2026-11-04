@@ -1,5 +1,6 @@
 import re
 from concurrent.futures import ThreadPoolExecutor
+from time import perf_counter
 from typing import Dict, List
 from urllib.parse import urljoin, urlparse
 
@@ -17,10 +18,16 @@ _SOURCES = (
 )
 
 
-def search_news(query: str, limit: int = 20) -> List[Dict]:
+def _record(metrics, stage, source, elapsed):
+    if metrics is not None:
+        metrics.put((stage, source, elapsed))
+
+
+def search_news(query: str, limit: int = 20, metrics=None) -> List[Dict]:
     with ThreadPoolExecutor(max_workers=len(_SOURCES)) as pool:
         futures = [
-            pool.submit(_search_source, query, limit, *source) for source in _SOURCES
+            pool.submit(_search_source, query, limit, *source, metrics)
+            for source in _SOURCES
         ]
         results = []
         for future in futures:
@@ -40,33 +47,49 @@ def _search_source(
     page_key,
     pages: int,
     resolve_links: bool,
+    metrics=None,
 ) -> List[Dict]:
+    started = perf_counter()
+    source = urlparse(url).netloc + urlparse(url).path
     results = []
-    with httpx.Client(
-        headers={"User-Agent": get_user_agent()},
-        timeout=20,
-        follow_redirects=True,
-    ) as client:
-        for page in range(1, pages + 1):
-            params = {**extra_params, query_key: query}
-            if page_key:
-                params[page_key] = page
-            response = client.get(url, params=params)
-            response.raise_for_status()
-            if "antispider" in str(response.url):
-                break
-            parser = parse_link_page if resolve_links else parse_search_page
-            results.extend(parser(response.text, limit))
-        if resolve_links:
-            with ThreadPoolExecutor(max_workers=8) as pool:
-                urls = list(
-                    pool.map(
-                        lambda result: _resolve_redirect_url(client, result["url"]),
-                        results,
-                    )
-                )
-            return _finalize_results(results, urls)
-    return results
+    try:
+        with httpx.Client(
+            headers={"User-Agent": get_user_agent()},
+            timeout=20,
+            follow_redirects=True,
+        ) as client:
+            for page in range(1, pages + 1):
+                params = {**extra_params, query_key: query}
+                if page_key:
+                    params[page_key] = page
+                t = perf_counter()
+                response = client.get(url, params=params)
+                response.raise_for_status()
+                _record(metrics, "request", source, perf_counter() - t)
+                if "antispider" in str(response.url):
+                    break
+                parser = parse_link_page if resolve_links else parse_search_page
+                t = perf_counter()
+                results.extend(parser(response.text, limit))
+                _record(metrics, "parse", source, perf_counter() - t)
+            if resolve_links:
+
+                def resolve_one(result):
+                    t = perf_counter()
+                    try:
+                        return _resolve_redirect_url(client, result["url"])
+                    finally:
+                        _record(metrics, "redirect", source, perf_counter() - t)
+
+                with ThreadPoolExecutor(max_workers=8) as pool:
+                    urls = list(pool.map(resolve_one, results))
+                t = perf_counter()
+                articles = _finalize_results(results, urls)
+                _record(metrics, "finalize", source, perf_counter() - t)
+                return articles
+        return results
+    finally:
+        _record(metrics, "source_total", source, perf_counter() - started)
 
 
 def _finalize_results(results: List[Dict], urls: List[str]) -> List[Dict]:
