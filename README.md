@@ -25,7 +25,19 @@ news "经济" --format json --save news.json
 ## Python API
 
 ```python
-from open_news import search_and_get
+from open_news import search_and_get, search_and_get_async
 
 articles = search_and_get("徒步 爬山事故", limit=20)
 ```
+
+## MCP
+
+本地 Codex 可直接通过 `uvx` 启动 MCP 服务：
+
+```toml
+[mcp_servers.news]
+command = "uvx"
+args = ["--from", "open-news-search", "news-mcp"]
+```
+
+工具名为 `search_news`，参数为 `query`、`limit` 和 `days`。

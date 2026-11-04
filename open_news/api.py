@@ -15,7 +15,7 @@ from .utils import get_user_agent
 _CONCURRENCY = 15
 
 
-async def _search_and_get_async(
+async def search_and_get_async(
     query: str,
     limit: int,
     days: Optional[int],
@@ -75,4 +75,4 @@ def search_and_get(
     limit: int = 20,
     days: Optional[int] = None,
 ) -> List[Dict]:
-    return asyncio.run(_search_and_get_async(query, limit, days))
+    return asyncio.run(search_and_get_async(query, limit, days))
