@@ -1,3 +1,4 @@
+import io
 import sys
 
 from open_news import api, cli
@@ -14,13 +15,19 @@ def test_search_cli_parses_query():
     assert args.days == 7
 
 
-def test_cli_prints_search_duration(monkeypatch, capsys):
+def test_cli_prints_search_duration_last(monkeypatch):
+    output = io.StringIO()
     monkeypatch.setattr(sys, "argv", ["news", "测试"])
-    monkeypatch.setattr(cli, "search_and_get", lambda *args, **kwargs: [])
+    monkeypatch.setattr(sys, "stdout", output)
+    monkeypatch.setattr(sys, "stderr", output)
+    monkeypatch.setattr(cli, "search_and_get", lambda *args, **kwargs: [{
+        "title": "测试新闻",
+        "url": "https://example.com",
+    }])
 
     cli.main()
 
-    assert "搜索用时:" in capsys.readouterr().err
+    assert output.getvalue().splitlines()[-1].startswith("搜索用时:")
 
 
 def test_search_keeps_unmatched_results_after_matches(monkeypatch):

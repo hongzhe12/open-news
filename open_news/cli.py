@@ -46,7 +46,7 @@ def main() -> None:
         limit=args.limit,
         days=args.days,
     )
-    print(f"搜索用时: {perf_counter() - started:.2f} 秒", file=sys.stderr)
+    elapsed = perf_counter() - started
     if args.save:
         with open(args.save, "w", encoding="utf-8") as file:
             json.dump(articles, file, ensure_ascii=False, indent=2, default=str)
@@ -54,6 +54,7 @@ def main() -> None:
         print(json.dumps(articles, ensure_ascii=False, indent=2, default=str))
     else:
         _print_articles(articles)
+    print(f"搜索用时: {elapsed:.2f} 秒", file=sys.stderr)
 
 
 def _print_articles(articles) -> None:
