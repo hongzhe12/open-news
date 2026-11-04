@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-open-news = "open_news.cli:main"
+news = "open_news.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["open_news*"]

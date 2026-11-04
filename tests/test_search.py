@@ -15,7 +15,7 @@ def test_search_cli_parses_query():
 
 
 def test_cli_prints_search_duration(monkeypatch, capsys):
-    monkeypatch.setattr(sys, "argv", ["open-news", "测试"])
+    monkeypatch.setattr(sys, "argv", ["news", "测试"])
     monkeypatch.setattr(cli, "search_and_get", lambda *args, **kwargs: [])
 
     cli.main()

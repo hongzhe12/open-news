@@ -11,10 +11,10 @@ uv sync --default-index https://pypi.tuna.tsinghua.edu.cn/simple/
 ## 使用
 
 ```bash
-open-news "徒步 爬山事故"
-open-news "人工智能" --limit 30
-open-news "人工智能" --days 7
-open-news "经济" --format json --save news.json
+news "徒步 爬山事故"
+news "人工智能" --limit 30
+news "人工智能" --days 7
+news "经济" --format json --save news.json
 ```
 
 搜索结束后会显示本次耗时。JSON 输出和耗时提示相互独立。

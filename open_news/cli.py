@@ -9,7 +9,7 @@ from .api import search_and_get
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="open-news",
+        prog="news",
         description="Search Chinese news by keyword.",
     )
     parser.add_argument("--version", action="store_true")
@@ -35,7 +35,7 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
     if args.version:
-        print(f"open-news {__version__}")
+        print(f"news {__version__}")
         return
     if not args.query:
         parser.error("a search query is required")
