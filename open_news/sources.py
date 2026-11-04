@@ -1,6 +1,5 @@
 import asyncio
 import re
-from time import perf_counter
 from typing import Dict, List
 from urllib.parse import urljoin, urlparse
 
@@ -18,21 +17,15 @@ _SOURCES = (
 )
 
 
-def _record(metrics, stage, source, elapsed):
-    if metrics is not None:
-        metrics.put((stage, source, elapsed))
-
-
 async def search_news(
     query: str,
     limit: int,
     client: httpx.AsyncClient,
     semaphore: asyncio.Semaphore,
-    metrics=None,
 ) -> List[Dict]:
     results = await asyncio.gather(
         *[
-            _search_source(query, limit, *source, client, semaphore, metrics)
+            _search_source(query, limit, *source, client, semaphore)
             for source in _SOURCES
         ],
         return_exceptions=True,
@@ -56,48 +49,32 @@ async def _search_source(
     resolve_links: bool,
     client: httpx.AsyncClient,
     semaphore: asyncio.Semaphore,
-    metrics=None,
 ) -> List[Dict]:
-    started = perf_counter()
-    source = urlparse(url).netloc + urlparse(url).path
-
     async def fetch_page(page):
         params = {**extra_params, query_key: query}
         if page_key:
             params[page_key] = page
-        t = perf_counter()
-        try:
-            async with semaphore:
-                response = await client.get(url, params=params)
-            response.raise_for_status()
-        finally:
-            _record(metrics, "page_request", source, perf_counter() - t)
+        async with semaphore:
+            response = await client.get(url, params=params)
+        response.raise_for_status()
         if "antispider" in str(response.url):
             return page, [], True
         parser = parse_link_page if resolve_links else parse_search_page
-        t = perf_counter()
-        try:
-            articles = parser(response.text, limit)
-        finally:
-            _record(metrics, "parse", source, perf_counter() - t)
-        return page, articles, False
+        return page, parser(response.text, limit), False
 
-    try:
-        page_results = await asyncio.gather(
-            *(fetch_page(page) for page in range(1, pages + 1)),
-            return_exceptions=True,
-        )
-        results = []
-        for _, page_articles, stop in sorted(
-            (result for result in page_results if not isinstance(result, Exception)),
-            key=lambda result: result[0],
-        ):
-            results.extend(page_articles)
-            if stop:
-                break
-        return results
-    finally:
-        _record(metrics, "source_total", source, perf_counter() - started)
+    page_results = await asyncio.gather(
+        *(fetch_page(page) for page in range(1, pages + 1)),
+        return_exceptions=True,
+    )
+    results = []
+    for _, page_articles, stop in sorted(
+        (result for result in page_results if not isinstance(result, Exception)),
+        key=lambda result: result[0],
+    ):
+        results.extend(page_articles)
+        if stop:
+            break
+    return results
 
 
 def _finalize_results(results: List[Dict], urls: List[str]) -> List[Dict]:
@@ -116,39 +93,33 @@ async def _resolve_redirect_url(
     client: httpx.AsyncClient,
     semaphore: asyncio.Semaphore,
     url: str,
-    metrics=None,
-    source="-",
 ) -> str:
-    t = perf_counter()
+    target = urljoin("https://www.sogou.com", url)
+    if not target.startswith(("http://", "https://")) or target.startswith(
+        "javascript:"
+    ):
+        return ""
+    if not any(host in target for host in ("sogou.com/link", "so.com/link")):
+        return target
+    if "so.com/link" in target:
+        referer = "https://www.so.com/"
+    elif "weixin.sogou.com" in target:
+        referer = "https://weixin.sogou.com/"
+    else:
+        referer = "https://www.sogou.com/"
     try:
-        target = urljoin("https://www.sogou.com", url)
-        if not target.startswith(("http://", "https://")) or target.startswith(
-            "javascript:"
-        ):
-            return ""
-        if not any(host in target for host in ("sogou.com/link", "so.com/link")):
-            return target
-        if "so.com/link" in target:
-            referer = "https://www.so.com/"
-        elif "weixin.sogou.com" in target:
-            referer = "https://weixin.sogou.com/"
-        else:
-            referer = "https://www.sogou.com/"
-        try:
-            async with semaphore:
-                response = await client.get(target, headers={"Referer": referer})
-            response.raise_for_status()
-        except httpx.HTTPError:
-            return ""
-        parts = re.findall(r"url \+= '([^']*)'", response.text)
-        if parts:
-            return "".join(parts)
-        match = re.search(r'window\.location\.replace\("([^"]+)"\)', response.text)
-        if not match:
-            match = re.search(r"URL='([^']+)'", response.text)
-        return match.group(1) if match else ""
-    finally:
-        _record(metrics, "redirect", source, perf_counter() - t)
+        async with semaphore:
+            response = await client.get(target, headers={"Referer": referer})
+        response.raise_for_status()
+    except httpx.HTTPError:
+        return ""
+    parts = re.findall(r"url \+= '([^']*)'", response.text)
+    if parts:
+        return "".join(parts)
+    match = re.search(r'window\.location\.replace\("([^"]+)"\)', response.text)
+    if not match:
+        match = re.search(r"URL='([^']+)'", response.text)
+    return match.group(1) if match else ""
 
 
 def parse_link_page(html: str, limit: int) -> List[Dict]:

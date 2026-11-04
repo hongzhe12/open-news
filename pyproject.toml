@@ -22,7 +22,6 @@ include = ["open_news*"]
 
 [dependency-groups]
 dev = [
-    "pyinstrument>=5.1.3",
     "pytest",
 ]
 
