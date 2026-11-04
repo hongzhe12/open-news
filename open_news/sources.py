@@ -8,7 +8,6 @@ from lxml.html import fromstring
 
 from .utils import date_from_url, get_user_agent, parse_datetime
 
-
 _SOURCES = (
     ("https://news.so.com/ns", "q", {"src": "srp"}, "pn", 4, False),
     ("https://www.so.com/s", "q", {}, "pn", 4, True),
@@ -21,8 +20,7 @@ _SOURCES = (
 def search_news(query: str, limit: int = 20) -> List[Dict]:
     with ThreadPoolExecutor(max_workers=len(_SOURCES)) as pool:
         futures = [
-            pool.submit(_search_source, query, limit, *source)
-            for source in _SOURCES
+            pool.submit(_search_source, query, limit, *source) for source in _SOURCES
         ]
         results = []
         for future in futures:
@@ -61,10 +59,12 @@ def _search_source(
             results.extend(parser(response.text, limit))
         if resolve_links:
             with ThreadPoolExecutor(max_workers=8) as pool:
-                urls = list(pool.map(
-                    lambda result: _resolve_redirect_url(client, result["url"]),
-                    results,
-                ))
+                urls = list(
+                    pool.map(
+                        lambda result: _resolve_redirect_url(client, result["url"]),
+                        results,
+                    )
+                )
             return _finalize_results(results, urls)
     return results
 
@@ -83,7 +83,9 @@ def _finalize_results(results: List[Dict], urls: List[str]) -> List[Dict]:
 
 def _resolve_redirect_url(client: httpx.Client, url: str) -> str:
     target = urljoin("https://www.sogou.com", url)
-    if not target.startswith(("http://", "https://")) or target.startswith("javascript:"):
+    if not target.startswith(("http://", "https://")) or target.startswith(
+        "javascript:"
+    ):
         return ""
     if not any(host in target for host in ("sogou.com/link", "so.com/link")):
         return target
@@ -114,12 +116,7 @@ def parse_link_page(html: str, limit: int) -> List[Dict]:
     for link in document.xpath("//h3/a[@href]"):
         title = " ".join(link.text_content().split())
         url = link.get("href", "")
-        if (
-            not title
-            or not url
-            or url.startswith("javascript:")
-            or url in seen
-        ):
+        if not title or not url or url.startswith("javascript:") or url in seen:
             continue
         containers = link.xpath(
             "ancestor::div[contains(@class, 'vrwrap')][1] | ancestor::li[1]"
@@ -135,18 +132,22 @@ def parse_link_page(html: str, limit: int) -> List[Dict]:
             year, month, day = dates[-1]
             published = parse_datetime(f"{year}-{month}-{day}")
         source = " ".join("".join(container.xpath(".//cite//text()")).split())
-        description = " ".join(" ".join(
-            paragraph.text_content()
-            for paragraph in container.xpath(".//p[not(contains(@class, 'info'))]")
-        ).split())
+        description = " ".join(
+            " ".join(
+                paragraph.text_content()
+                for paragraph in container.xpath(".//p[not(contains(@class, 'info'))]")
+            ).split()
+        )
         seen.add(url)
-        articles.append({
-            "title": title,
-            "url": url,
-            "source": source,
-            "published": published.isoformat() if published else None,
-            "description": description[:500],
-        })
+        articles.append(
+            {
+                "title": title,
+                "url": url,
+                "source": source,
+                "published": published.isoformat() if published else None,
+                "description": description[:500],
+            }
+        )
         if len(articles) >= limit:
             break
     return articles
@@ -167,22 +168,26 @@ def parse_search_page(html: str, limit: int) -> List[Dict]:
         url = links[0].get("href", "")
         if not title or not url.startswith("http") or url in seen:
             continue
-        snippet = " ".join(" ".join(
-            paragraph.text_content()
-            for paragraph in result.xpath(".//p[not(contains(@class, 'info'))]")
-        ).split())
+        snippet = " ".join(
+            " ".join(
+                paragraph.text_content()
+                for paragraph in result.xpath(".//p[not(contains(@class, 'info'))]")
+            ).split()
+        )
         source = " ".join("".join(result.xpath(".//cite//text()")).split())
         published = parse_datetime(
             "".join(result.xpath(".//span[contains(@class, 'time')]//text()"))
         )
         seen.add(url)
-        articles.append({
-            "title": title,
-            "url": url,
-            "source": source or urlparse(url).netloc.replace("www.", ""),
-            "published": published.isoformat() if published else date_from_url(url),
-            "description": snippet[:500],
-        })
+        articles.append(
+            {
+                "title": title,
+                "url": url,
+                "source": source or urlparse(url).netloc.replace("www.", ""),
+                "published": published.isoformat() if published else date_from_url(url),
+                "description": snippet[:500],
+            }
+        )
         if len(articles) >= limit:
             break
     return articles

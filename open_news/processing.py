@@ -12,12 +12,21 @@ with warnings.catch_warnings():
 
 from .utils import nfc, parse_datetime
 
-
 jieba.setLogLevel(logging.ERROR)
 
 _TRACKING_PARAMS = {
-    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-    "fbclid", "gclid", "igshid", "ref", "ref_src", "ito", "smid",
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_term",
+    "utm_content",
+    "fbclid",
+    "gclid",
+    "igshid",
+    "ref",
+    "ref_src",
+    "ito",
+    "smid",
 }
 _QUERY_TOKENS = re.compile(r'"([^"]+)"|(\S+)')
 _CJK = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]")
@@ -37,15 +46,23 @@ def search_queries(query: str) -> List[str]:
 
 def normalize_url(url: str) -> str:
     parsed = urlparse(url)
-    query = urlencode(sorted(
-        (key, value)
-        for key, value in parse_qsl(parsed.query)
-        if key.lower() not in _TRACKING_PARAMS
-    ))
-    return urlunparse((
-        "", parsed.netloc.lower().replace("www.", ""),
-        parsed.path.rstrip("/"), "", query, "",
-    )).lstrip("/")
+    query = urlencode(
+        sorted(
+            (key, value)
+            for key, value in parse_qsl(parsed.query)
+            if key.lower() not in _TRACKING_PARAMS
+        )
+    )
+    return urlunparse(
+        (
+            "",
+            parsed.netloc.lower().replace("www.", ""),
+            parsed.path.rstrip("/"),
+            "",
+            query,
+            "",
+        )
+    ).lstrip("/")
 
 
 def dedupe_articles(articles: List[Dict]) -> List[Dict]:
@@ -83,7 +100,7 @@ def title_matches_query(article: Dict, query: str) -> bool:
         if not term:
             continue
         if _CJK.search(term) and len(term) > 2:
-            keywords.extend(term[i:i + 2] for i in range(len(term) - 1))
+            keywords.extend(term[i : i + 2] for i in range(len(term) - 1))
         else:
             keywords.append(term)
     return any(_contains(title, keyword) for keyword in keywords)

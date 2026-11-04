@@ -59,10 +59,15 @@ def main() -> None:
 def _print_articles(articles) -> None:
     for index, article in enumerate(articles, 1):
         print(f"[{index}] {article.get('title') or 'Untitled'}")
-        metadata = " | ".join(filter(None, (
-            article.get("source"),
-            article.get("published") or article.get("publish_date"),
-        )))
+        metadata = " | ".join(
+            filter(
+                None,
+                (
+                    article.get("source"),
+                    article.get("published") or article.get("publish_date"),
+                ),
+            )
+        )
         if metadata:
             print(f"    {metadata}")
         print(f"    {article.get('url', '')}")

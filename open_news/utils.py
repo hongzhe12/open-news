@@ -4,7 +4,6 @@ import unicodedata
 from datetime import datetime, timezone
 from typing import Optional, Union
 
-
 _USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
@@ -42,6 +41,8 @@ def date_from_url(url: str) -> Optional[str]:
     if not match:
         return None
     try:
-        return datetime(*(int(part) for part in match.groups()), tzinfo=timezone.utc).isoformat()
+        return datetime(
+            *(int(part) for part in match.groups()), tzinfo=timezone.utc
+        ).isoformat()
     except ValueError:
         return None
