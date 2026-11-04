@@ -89,11 +89,7 @@ async def _search_source(
         )
         results = []
         for _, page_articles, stop in sorted(
-            (
-                result
-                for result in page_results
-                if not isinstance(result, Exception)
-            ),
+            (result for result in page_results if not isinstance(result, Exception)),
             key=lambda result: result[0],
         ):
             results.extend(page_articles)

@@ -17,7 +17,6 @@ from .processing import (
 from .sources import _finalize_results, _resolve_redirect_url, search_news
 from .utils import get_user_agent
 
-
 _CONCURRENCY = 15
 
 
@@ -85,10 +84,7 @@ async def _search_and_get_async(
         t = perf_counter()
         urls = list(dict.fromkeys(article["url"] for article in articles))
         resolved = await asyncio.gather(
-            *(
-                _resolve_redirect_url(client, semaphore, url, metrics)
-                for url in urls
-            ),
+            *(_resolve_redirect_url(client, semaphore, url, metrics) for url in urls),
             return_exceptions=True,
         )
         url_map = {
