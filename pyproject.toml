@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-news-search"
-version = "0.2.1"
+version = "0.2.2"
 description = "Search Chinese news articles"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,7 +16,6 @@ dependencies = [
 ]
 
 [project.scripts]
-news = "open_news.cli:main"
 news-mcp = "open_news.mcp_server:main"
 
 [tool.setuptools.packages.find]
