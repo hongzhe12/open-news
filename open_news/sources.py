@@ -11,7 +11,7 @@ from .utils import date_from_url, get_user_agent, parse_datetime
 
 _SOURCES = (
     ("https://news.so.com/ns", "q", {"src": "srp"}, "pn", 4, False),
-    # ("https://www.so.com/s", "q", {}, "pn", 4, True),
+    ("https://www.so.com/s", "q", {}, "pn", 4, True),
     ("https://www.sogou.com/web", "query", {}, None, 1, True),
     ("https://news.sogou.com/news", "query", {}, None, 1, True),
     ("https://weixin.sogou.com/weixin", "query", {"type": "2"}, "page", 5, True),
