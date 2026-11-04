@@ -3,131 +3,34 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "open-news-api"
-version = "1.0.4"
-description = "Minimal news fetching: article text, RSS, Google News search, RSS discovery"
+name = "open-news-search"
+version = "0.3.0"
+description = "Search Chinese news articles"
 readme = "README.md"
-authors = [{name = "ARAJIT PAUL", email = "arajitpaul2010@gmail.com"}]
-license = "MIT"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3 :: Only",
-    "Operating System :: OS Independent",
-    "Intended Audience :: Developers",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Text Processing :: Markup :: HTML",
-    "Topic :: Utilities",
-]
 requires-python = ">=3.10"
-keywords = ["news", "rss", "google-news", "article-extraction", "feedparser", "newspaper"]
 dependencies = [
-    "lxml",
-    "python-dateutil",
     "httpx",
-    "beautifulsoup4",
-    "feedparser",
-    "googlenewsdecoder",
-    "requests",
-    "ddgs",
-    "langdetect",
-    "legacy-cgi"
+    "jieba",
+    "lxml",
 ]
-
-[project.urls]
-Homepage = "https://github.com/alphap365/open-news"
 
 [project.scripts]
-open-news = "open_news.cli:main"
-open-news-tui = "open_news.tui:run_tui"
-
-[tool.setuptools]
-include-package-data = true
+news = "open_news.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["open_news*"]
 
-[tool.setuptools.package-data]
-open_news = ["py.typed"]
-
 [dependency-groups]
 dev = [
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
-    "pytest-vcr>=1.0",
-    "respx>=0.20",
-    "tox>=4.0",
-    "pytest-mock>=3.0",
-    "mypy",
-    "cibuildwheel",
-]
-js = [
-    "playwright>=1.40.0"
+    "pytest",
 ]
 
-nlp = [
-    "sumy>=0.10.0",
-    "bm25s>=0.3.10",
-]
 
-all = [
-    {include-group = "dev"},
-    {include-group = "js"},
-    {include-group = "nlp"}
-]
+[[tool.uv.index]]
+name = "tsinghua"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
+default = true
 
-[project.optional-dependencies]
-js = [
-    "playwright>=1.40.0"
-]
-
-nlp = [
-    "sumy>=0.10.0",
-    "bm25s>=0.3.10",
-]
-
-dev = [
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
-    "pytest-vcr>=1.0",
-    "respx>=0.20",
-    "tox>=4.0",
-    "pytest-mock>=3.0",
-    "mypy",
-    "cibuildwheel",
-]
-
-[tool.mypy]
-python_version = "3.10"
-warn_unused_ignores = true
-exclude = ["tests"]
-disable_error_code = [
-    "arg-type",
-    "assignment",
-    "attr-defined",
-    "index",
-    "misc",
-    "name-defined",
-    "no-redef",
-    "union-attr",
-    "unused-ignore",
-    "var-annotated",
-    "annotation-unchecked",
-    "import-untyped",
-    "import-not-found",
-]
-
-[[tool.mypy.overrides]]
-module = [
-    "dateutil.*",
-    "feedparser",
-    "langdetect",
-    "googlenewsdecoder",
-    "playwright",
-    "playwright.*",
-    "duckduckgo_search",
-    "sumy.*",
-    "colorama",
-    "bs4",
-    "lxml.*",
-]
-ignore_missing_imports = true
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple/"
